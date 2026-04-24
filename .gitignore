@@ -1,0 +1,6 @@
+linux-*/
+linux-*.tar.xz
+*.o
+*.cpio.gz
+bzImage
+rootfs/
