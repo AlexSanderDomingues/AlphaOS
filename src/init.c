@@ -5,147 +5,174 @@
 #include <linux/reboot.h>
 #include <sys/mount.h>
 #include <dirent.h>
+#include "config.h" // <--- Injeta as configurações aqui!
 
-
+// Declarações corretas das funções
 void criar_arquivo(const char *nome_arquivo);
 void ler_arquivo(const char *nome_arquivo);
-void listas_arquivo();
+void listar_arquivo();
+void remover_arquivo(const char *nome_arquivo);
 
-int main(){
+int main() {
+    // Remonta o rootfs se necessário
+    mount("none", "/", NULL, MS_REMOUNT, NULL);
 
-mount("none", "/", NULL, MS_REMOUNT, NULL);
+    // Banner Inicial usando as cores e textos do config.h
+    printf("%s", OS_COLOR_BANNER);
+    printf("##############################################\n");
+    printf("#\t%s\t#\n", OS_TITLE);
+    printf("##############################################\n");
+    printf("%s", OS_COLOR_RESET);
 
+    printf("%s\n", OS_DESCRIPTION);
+    printf("Aguardando comandos...\n");
 
-printf("\033[0;32m\n");
-printf("##############################################\n");
-printf("#	AlphaOS - Kernel Iniciado	#\n");
-printf("##############################################\n");
+    char comando[MAX_COMMAND_LENGTH];
 
-printf("\033[0m");
+    while (1) {
+        printf("%s", PROMPT_STYLE);
+        fflush(stdout); // Garante que o prompt apareça antes do input
 
-printf("Alpha OS esta rodando atraves de binario estatico.\n");
-printf("Aguardando comandos...\n");
+        // Leitura de teclado
+        if (fgets(comando, sizeof(comando), stdin) != NULL) {
+            comando[strcspn(comando, "\n")] = 0;
 
-char comando[256];
+            if (strlen(comando) == 0) {
+                continue;
+            }
+            
+            // --- COMANDO: ajuda ---
+            if (strcmp(comando, "ajuda") == 0) {
+                printf("Comandos disponiveis:\n");
+                printf("\tajuda            -    Mostrar ajuda\n");
+                printf("\tsobre            -    Informaçoes sobre sistema\n");
+                printf("\tsair             -    Desligar o computador\n");
+		printf("\tlimpar           -    Limpa a tela do terminal\n");
+                printf("    criar <arquivo>  -    Criar um arquivo de texto\n");
+                printf("    ler <arquivo>    -    Ler um arquivo de texto\n");
+		printf("    remover  ou  rm <arq>    -    Deletar um arquivo de texto\n");
+                printf("\tlistar ou ls     -    Lista os arquivos da pasta atual\n");
+            }
+            // --- COMANDO: sobre ---
+            else if (strcmp(comando, "sobre") == 0) {
+                printf("%s", OS_ABOUT);
+            }
+            // --- COMANDO: sair ---
+            else if (strcmp(comando, "sair") == 0) {
+                printf("Saindo do Alpha OS ...\n");
+                sync();
+                reboot(LINUX_REBOOT_CMD_POWER_OFF); 
+            }
+	    // --- COMANDO: limpar  ---
+	    else if (strcmp(comando, "limpar") == 0 || strcmp(comando, "clear") == 0) {
+                printf("\033[H\033[J");
+            }
+            // --- COMANDO: listar/ls ---
+            else if (strcmp(comando, "listar") == 0 || strcmp(comando, "ls") == 0) {
+                listar_arquivo();
+            }
+            // --- COMANDO: ler/cat ---
+            else if (strncmp(comando, "ler ", 4) == 0) {
+                ler_arquivo(comando + 4);    
+            }
+            else if (strncmp(comando, "cat ", 4) == 0) {
+                ler_arquivo(comando + 4);    
+            }
+            // --- COMANDO: criar/touch ---
+            else if (strncmp(comando, "criar ", 6) == 0) {
+                criar_arquivo(comando + 6);
+            }
+            else if (strncmp(comando, "touch ", 6) == 0) {
+                criar_arquivo(comando + 6);
+            }
+	    // --- COMANDO: remover/rm (Recurso 2) ---
+            else if (strncmp(comando, "remover ", 8) == 0) {
+                remover_arquivo(comando + 8);
+            }
+            else if (strncmp(comando, "rm ", 3) == 0) {
+                remover_arquivo(comando + 3);
+            }
+            // --- COMANDO DESCONHECIDO ---
+            else {
+                printf("Comando nao encontrado: %s\n", comando);
+            }
+        }
+    }
 
-while(1){
-	printf("AlphaOS# ");
-	//leitura de teclado
-	if(fgets(comando,sizeof(comando),stdin) != NULL){
-		comando[strcspn(comando,"\n")] = 0;
-
-		if (strlen(comando) == 0){
-
-			continue;
-		}
-		
-		if(strcmp(comando , "ajuda") == 0){
-			printf("Comando disponiveis:\n");
-			printf("	ajuda   -    Mostrar ajuda\n");
-			printf("	sobre   -    Informaçoes sobre sistema\n");
-			printf("	sair    -    Desligar o computador\n");
-			printf("    criar <arquivo>  -    criar um arquivo de texto\n");
-			printf("     ler <arquivo>  -    ler uma arquivo de texto\n");
-			printf("	listar ou ls - lista os arquivo da pasta atual\n");
-		}
-		else if(strcmp(comando, "sobre") == 0){
-			printf("Alpha OS e um sistema operacional Compile-To-Configure feito puramente em C\nDesenvolvido por Alex Sander Domingues\n");
-		}
-		else if(strcmp(comando, "sair") == 0){
-			printf("Saindo do Alpha OS ...\n");
-			sync();
-			reboot(LINUX_REBOOT_CMD_POWER_OFF); //REBOOT PARA PLACA MAE
-		
-		}
-		else if(strcmp(comando,"listar") == 0 || strcmp(comando,"ls") == 0){
-			listar_arquivo();
-		}
-		else if(strncmp(comando,"ler ",4) == 0 || strncmp(comando,"cat ",4) == 0){
-			ler_arquivo(comando + 4);	
-		}
-		else if(strncmp(comando,"criar ",6) == 0 || strncmp(comando,"touch ",6) == 0){
-			criar_arquivo(comando + 6);
-		}
-		else{
-			printf("Comando nao encontrado: %s",comando);
-		}
-	}
-	
-
+    return 0;
 }
 
-	return 0;
+// --- FUNÇÃO: Criar Arquivo ---
+void criar_arquivo(const char *nome_arquivo) {
+    FILE *arquivo = fopen(nome_arquivo, "a");
+    
+    if (arquivo == NULL) {
+        printf("Erro ao criar arquivo!\n");
+        return;
+    }
 
+    printf("==========================================\n");
+    printf("MODO DE ESCRITA\nPara salvar e sair digite ':q' e de enter em uma nova linha\n");
+    printf("==========================================\n");
+    
+    char linha[MAX_LINE_LENGTH];
+
+    while (1) {
+        printf("> ");
+        if (fgets(linha, sizeof(linha), stdin) != NULL) {
+            // Verifica o comando de saída :q
+            if (strncmp(linha, ":q\n", 3) == 0 || strcmp(linha, ":q") == 0) {
+                break;
+            }
+            fputs(linha, arquivo);
+        }
+    }
+
+    fclose(arquivo);
 }
 
-void criar_arquivo(const char *nome_arquivo){
-	
-	FILE *arquivo = fopen(nome_arquivo,"a");
-	
-	if(arquivo == NULL){
-		printf("Erro ao criar arquivo!\n");
-		return;
-	}
+// --- FUNÇÃO: Ler Arquivo ---
+void ler_arquivo(const char *nome_arquivo) {
+    FILE *arquivo = fopen(nome_arquivo, "r");
+    if (arquivo == NULL) {
+        printf("Erro ao ler arquivo!\n");
+        return;
+    }
+    
+    char linha[MAX_LINE_LENGTH];
 
-	printf("==========================================\n");
-	printf("MODO DE ESCRITA\nPara salvar e sair digite ':q' e de enter em uma nova linha\n");
-	printf("==========================================\n");
-	
-	char linha[256];
-
-	while(1){
-
-		printf("> ");
-		
-		if(fgets(linha,sizeof(linha),stdin) != NULL){
-		
-			if(strncmp(linha, ":q\n", 3) == 0 || strcmp(linha,":q") == 0){
-				break;
-			}
-			fputs(linha,arquivo);
-		}
-
-	}
-
-	fclose(arquivo);
-
+    while (fgets(linha, sizeof(linha), arquivo)) {
+        printf("%s", linha);
+    }
+    fclose(arquivo);
 }
 
-void ler_arquivo(const char *nome_arquivo){
-
-	FILE *arquivo = fopen(nome_arquivo,"r");
-	if(arquivo == NULL){
-		printf("Erro ao ler arquivo!\n");
-		return;
-	}
-	
-	char linha[256];
-
-	while(fgets(linha,sizeof(linha),arquivo)){
-		printf("%s",linha);
-	}
-	fclose(arquivo);
-
+void remover_arquivo(const char *nome_arquivo) {
+    if (remove(nome_arquivo) == 0) {
+        printf("Arquivo '%s' removido com sucesso.\n", nome_arquivo);
+    } else {
+        printf("Erro: Nao foi possivel remover o arquivo '%s'.\n", nome_arquivo);
+    }
 }
 
-void listar_arquivo(){
+// --- FUNÇÃO: Listar Arquivos ---
 
-	DIR *d;
-	struct dirent *dir;
-	
-	d = opendir(".");
+void listar_arquivo() {
+    DIR *d;
+    struct dirent *dir;
+    
+    d = opendir(".");
 
-	if(d){
-		printf("Conteudo da pasta atual:\n");
-		while((dir= readdir(d)) != NULL){
-			if(dir->d_name[0] != "."){
-				printf("   [Arquivo] %s\n",dir->d_name);
-			}
-		}
-		closedir(d);
-	
-	}else{
-		printf("Erro: Nao foi possivel ler o diretorio!");
-	}
-
+    if (d) {
+        printf("Conteudo da pasta atual:\n");
+        while ((dir = readdir(d)) != NULL) {
+            if (dir->d_name[0] != '.') {
+                // Aplica a cor do config.h antes de printar o nome do arquivo
+                printf("   [Arquivo] %s%s%s\n", OS_COLOR_FILE, dir->d_name, OS_COLOR_RESET);
+            }
+        }
+        closedir(d);
+    } else {
+        printf("Erro: Nao foi possivel leer o diretorio!\n");
+    }
 }
