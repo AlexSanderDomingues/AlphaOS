@@ -16,6 +16,15 @@ void remover_arquivo(const char *nome_arquivo);
 int main() {
     // Remonta o rootfs se necessário
     mount("none", "/", NULL, MS_REMOUNT, NULL);
+    mkdir(PONTO_MONTAGEM, 0777); 
+    
+    // Tenta montar o HD externo (/dev/sdb1) na pasta /data usando o sistema Ext4
+    if (mount(DISCO_PERSISTENCIA, PONTO_MONTAGEM, "ext4", 0, NULL) == 0) {
+        printf("\033[0;32m[SUCESSO] Persistencia ativada em %s\033[0m\n", PONTO_MONTAGEM);
+    } else {
+        printf("\033[0;31m[AVISO] Nao foi possivel montar o HD Externo. Rodando apenas em RAM.\033[0m\n");
+    }
+
 
     // Banner Inicial usando as cores e textos do config.h
     printf("%s", OS_COLOR_BANNER);
