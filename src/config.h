@@ -17,6 +17,11 @@
 #define OS_COLOR_FILE   "\033[1;34m"  // Azul Negrito
 #define OS_COLOR_BANNER "\033[0;32m"
 #define OS_COLOR_RESET  "\033[0m"
+// --- Disco --- 
+#define DISCO_PERSISTENCIA "/dev/sdb1"
+#define PONTO_MONTAGEM "/data"
+
+
 
 // --- Limites do Sistema ---
 #define MAX_COMMAND_LENGTH 256
